@@ -176,3 +176,11 @@ cython_debug/
 configuration.json
 tickets.db
 warn.db
+
+.dockerignore
+
+deploy.sh
+
+docker-compose.yml
+
+Dockerfile

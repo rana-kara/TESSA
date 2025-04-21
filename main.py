@@ -146,7 +146,7 @@ class open_help_button(discord.ui.View):
         }
 
         embed = discord.Embed(
-            title="Welcome to Help & Support <a:yaypepe:1287799465364815905>",
+            title="Welcome to Help & Support",
             description="Staff will be with you shortly. Please describe the issue in the meanwhile.",
             color=discord.Color(0x2B2D31)
         )
@@ -177,7 +177,7 @@ async def on_ready():
     channel = bot.get_channel(channel_id)
 
     embed = discord.Embed(
-        title="Help & Support <a:yaypepe:1287799465364815905>",
+        title="Help & Support",
         description="After reading the instructions above, you can create a ticket by clicking the button below!",
         color = discord.Color(0x2B2D31)
     )

@@ -8,14 +8,15 @@ from typing import Optional
 
 def init_warn_db():
     """Initializes the warnings database and table."""
-    conn = sqlite3.connect("warn.db")
+    conn = sqlite3.connect("warnings.db")
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS warnings (
             user_id INTEGER,
-            warning_id INTEGER,
+            warning_id TEXT,
             timestamp TEXT,
             reason TEXT,
+            moderator_id INTEGER,
             PRIMARY KEY (user_id, warning_id)
         )
     ''')
@@ -23,23 +24,27 @@ def init_warn_db():
     conn.close()
 
 
-def add_warning(user_id: int, reason: str):
-    conn = sqlite3.connect("warn.db")
+def add_warning(user_id: int, reason: str, moderator_id: int):
+    conn = sqlite3.connect("warnings.db")
     c = conn.cursor()
 
-    c.execute(
-        "SELECT COUNT(*) FROM warnings WHERE user_id = ?",
-        (user_id,)
-    )
-    warning_count = c.fetchone()[0]
-    warning_id = warning_count + 1
+    now = datetime.now()
+    time_str = now.strftime("%d%m%y-%H-%M-%S")
 
+    c.execute(
+        "SELECT COUNT(*) FROM warnings WHERE user_id = ? AND timestamp = ?",
+        (user_id, time_str)
+    )
+    count_at_time = c.fetchone()[0]
+    increment = count_at_time + 1
+
+    warning_id = f"{time_str}-{increment}"
     timestamp = int(datetime.now().timestamp())
 
     c.execute(
-        "INSERT INTO warnings (user_id, warning_id, timestamp, reason) "
-        "VALUES (?, ?, ?, ?)",
-        (user_id, warning_id, timestamp, reason)
+        "INSERT INTO warnings (user_id, warning_id, timestamp, reason, moderator_id) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (user_id, warning_id, timestamp, reason, moderator_id)
     )
 
     conn.commit()
@@ -49,7 +54,7 @@ def add_warning(user_id: int, reason: str):
 
 def clear_warning(user_id: int, warning_id: Optional[str] = None) -> bool:
     """Clears a specific warning or all warnings for a user."""
-    conn = sqlite3.connect("warn.db")
+    conn = sqlite3.connect("warnings.db")
     c = conn.cursor()
 
     if warning_id:
@@ -71,11 +76,11 @@ def clear_warning(user_id: int, warning_id: Optional[str] = None) -> bool:
 
 
 def get_warnings(user_id: int):
-    conn = sqlite3.connect("warn.db")
+    conn = sqlite3.connect("warnings.db")
     c = conn.cursor()
 
     c.execute(
-        "SELECT warning_id, timestamp, reason FROM warnings "
+        "SELECT warning_id, timestamp, reason, moderator_id FROM warnings "
         "WHERE user_id = ? ORDER BY warning_id ASC",
         (user_id,)
     )
@@ -156,7 +161,7 @@ class moderation(commands.GroupCog, name="moderation", description="Moderation c
         except discord.Forbidden:
             await interaction.response.send_message(f"{user.display_name} has been warned successfully (DM message failed to send). Reason: {reason}")
 
-        add_warning(user.id, reason)
+        add_warning(user.id, reason, interaction.user.id)
 
     @app_commands.command(name="clearwarn", description="Remove a warning OR all warnings from a member")
     @app_commands.checks.has_any_role(711303603498778735, 1338561595852460032)
@@ -180,8 +185,8 @@ class moderation(commands.GroupCog, name="moderation", description="Moderation c
         warnings_data = get_warnings(user.id)
         if warnings_data:
             warnings_formatted = "\n".join(
-                f"**ID {wid}** — <t:{ts}:F>\n> {reason}"
-                for wid, ts, reason in warnings_data
+                f"**ID `{wid}`** — <t:{ts}:F>\n> **Reason**: {reason}\n> **By**: <@{mod_id}>"
+                for wid, ts, reason, mod_id in warnings_data
             )
         else:
             warnings_formatted = "*No warnings.*"

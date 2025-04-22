@@ -184,3 +184,5 @@ deploy.sh
 docker-compose.yml
 
 Dockerfile
+
+deploy_cog.sh
